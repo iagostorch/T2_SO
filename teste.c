@@ -187,8 +187,8 @@ int test2(){
           OK(2,10);
           /* verifica se mesmo conteudo que escreveu */
           /* se 2.8 falhou, aqui pode dar certo e falhar */
-          THEN("Valor lido e armazenado devem ser iguais");
-          if (strcmp(buffer, teste)!=0){
+          THEN("Valor lido e armazenado devem ser diferentes");
+          if (strcmp(buffer, teste)==0){
             FAIL(2,11);
           }
           else{

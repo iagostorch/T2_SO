@@ -14,6 +14,7 @@ int numeroArquivosAbertos = 0, numeroDescritores = 0;
 int primeiroBloco[256] = {0};
 FILE *ponteirosArquivos[256] = {NULL};
 int totalBlocosUsados = 0;
+int chaves[256];
 
 int nain() {
 	FILE *fp;
@@ -338,6 +339,13 @@ int cry_close(indice_arquivo_t arquivo) {
 int cry_write(indice_arquivo_t arquivo, uint32_t tamanho, char *buffer) {
 	int contadorBytes = 0, trocaBlocoLivre, blocoAtual, posAtualBloco, contadorAux = 0, i, j;
 	char temp[tamanho];
+	char bufferCrypto[tamanho];
+
+
+	for(i=0; i < tamanho; i++) {
+		//printf("%c\n", buffer[i]);
+		bufferCrypto[i] = (buffer[i] + chaves[arquivo-1]) % 256;
+	}
 
 	if(totalBlocosUsados + ceil(tamanho/4096) >= tamanhoFat){
 		return FALHA;	//não existem mais blocos livres
@@ -359,7 +367,7 @@ int cry_write(indice_arquivo_t arquivo, uint32_t tamanho, char *buffer) {
 			/* ESCREVE ARQUIVO NO FS */
 			fseek(currFileSys->arquivo_host, BLOCO * (19 + blocoAtual), SEEK_SET);
 			//printf("tamanho: %d-%d", blocoAtual, BLOCO * (20 + blocoAtual));
-			fwrite(buffer, sizeof(char), tamanho, currFileSys->arquivo_host);
+			fwrite(bufferCrypto, sizeof(char), tamanho, currFileSys->arquivo_host);
 			
 			atualizaDescritoresArquivo(-1, arquivo, 1, tamanho, currFileSys);
 		     
@@ -381,7 +389,7 @@ int cry_write(indice_arquivo_t arquivo, uint32_t tamanho, char *buffer) {
 			//printf("bloco atual %d\n", blocoAtual);
 			while(contadorBytes < tamanho){
 				for(j = 0; j < 4096; j++) {
-					temp[j] = buffer[contadorBytes];
+					temp[j] = bufferCrypto[contadorBytes];
 					contadorBytes++;
 					contadorAux++;
 
@@ -441,7 +449,7 @@ int cry_write(indice_arquivo_t arquivo, uint32_t tamanho, char *buffer) {
 
 		while(contadorBytes < tamanho){
 			for(j = 0; j < 4096; j++) {
-				temp[j] = buffer[contadorBytes];
+				temp[j] = bufferCrypto[contadorBytes];
 				contadorBytes++;
 				contadorAux++;
 
@@ -650,18 +658,15 @@ uint32_t cry_read(indice_arquivo_t arquivo, uint32_t tamanho, char *buffer) {
 	//printf("cry_read\n");
 	//printf("nome arquivo parametro %s\n", currFileSys->abertos[arquivo]->arquivo->nome);
 	//printf("nome arquivo parametro %s\n", currFileSys->abertos[arquivo].arquivo->nome);
-	for(int b=0; b<256; b++){
-	//	printf("nome arquivo desc   %d: %s\n",b,  currFileSys->descritores[b].nome);
-	//	printf("nome arquivo aberto %d: %s\n",b,  currFileSys->abertos[b].arquivo->nome);
-	}
+	int i;
 
 	int numLidos;//, k;
 	if(currFileSys->abertos[arquivo-1].arquivo != NULL) { 
-		printf("aberto valido\n");
+		//printf("aberto valido\n");
 		//printf("NAO NULL\n");
-		printf("tamanho %d\n", currFileSys->descritores[arquivo-1].tamanho);
+		//printf("tamanho %d\n", currFileSys->descritores[arquivo-1].tamanho);
 		if(currFileSys->descritores[arquivo-1].tamanho <= 4096){
-			printf("<1 bloco\n");
+			//printf("<1 bloco\n");
 			//int seekArquivo = currFileSys->abertos[arquivo].posicao; // ARRUMAAAAAAAARRRRRRRR ISSO
 			int seekArquivo = 0;
 
@@ -671,6 +676,11 @@ uint32_t cry_read(indice_arquivo_t arquivo, uint32_t tamanho, char *buffer) {
 				printf("ftell %ld\n", ftell(currFileSys->arquivo_host));
 				numLidos = fread(buffer, sizeof(char), tamanho, currFileSys->arquivo_host);
 				printf("buffer no read: %s\n", buffer);
+				
+				for(i=0; i < numLidos; i++){
+					buffer[i] =(buffer[i] - chaves[arquivo-1]) % 256;
+				}
+
 				//printf("buffer read: %s\n", buffer);
 				//printf("num lidos\n");
 				return numLidos;	
@@ -708,7 +718,7 @@ uint32_t cry_read(indice_arquivo_t arquivo, uint32_t tamanho, char *buffer) {
 				/* LÊ CONTEÚDO PARA 1 BLOCO OU MENOS */
 
 				while(fread(&aux, 1, 1, currFileSys->arquivo_host)) {
-					buffer[contadorBytes] = aux;
+					buffer[contadorBytes] = (aux - chaves[arquivo-1]) % 256;
 					//printf("%c", buffer[contadorBytes]);
 					contadorBytes++;
 					contadorAux++;
@@ -804,6 +814,8 @@ indice_arquivo_t cry_open(cry_desc_t *cry_desc, char * nome,  int acesso, char d
 
 					atualizaDescritoresArquivo(acesso, j, k, 0, cry_desc);
 					ponteirosArquivos[k-1] = fp;
+					chaves[k-1] = deslocamento;
+
 					
                     if(j == 0)
                     	return -1;
@@ -821,6 +833,7 @@ indice_arquivo_t cry_open(cry_desc_t *cry_desc, char * nome,  int acesso, char d
 
 				atualizaDescritoresArquivo(acesso, j, k, 0, cry_desc);	//AQUIIIIIII
 				ponteirosArquivos[k-1] = fp;
+				chaves[k-1] = deslocamento;
 
 
                 if(j == 0)
@@ -838,6 +851,7 @@ indice_arquivo_t cry_open(cry_desc_t *cry_desc, char * nome,  int acesso, char d
 
 				atualizaDescritoresArquivo(acesso, j, k, 0, cry_desc);
 				ponteirosArquivos[k-1] = fp;
+				chaves[k-1] = deslocamento;
 
                 
                 if(j == 0)
@@ -867,6 +881,7 @@ indice_arquivo_t cry_open(cry_desc_t *cry_desc, char * nome,  int acesso, char d
 				numeroArquivosAbertos++; 			
 
 				valorRetornoIndiceArquivo = atualizaDescritoresNovoArquivo(-1, nome, acesso, fp, cry_desc);
+				chaves[valorRetornoIndiceArquivo-1] = deslocamento;			
 				return valorRetornoIndiceArquivo;
 
 				
@@ -889,6 +904,7 @@ indice_arquivo_t cry_open(cry_desc_t *cry_desc, char * nome,  int acesso, char d
 			numeroArquivosAbertos++;// printf("incrementou abertos %d\n", numeroArquivosAbertos);
 
 			valorRetornoIndiceArquivo = atualizaDescritoresNovoArquivo(-1, nome, acesso, fp, cry_desc); // atualiza descritores   
+			chaves[valorRetornoIndiceArquivo-1] = deslocamento; 		
 			return valorRetornoIndiceArquivo;
 		}
 
@@ -901,6 +917,7 @@ indice_arquivo_t cry_open(cry_desc_t *cry_desc, char * nome,  int acesso, char d
 			numeroArquivosAbertos++;// printf("incrementou abertos %d\n", numeroArquivosAbertos);
 			
 			valorRetornoIndiceArquivo = atualizaDescritoresNovoArquivo(-1, nome, acesso, fp, cry_desc);
+			chaves[valorRetornoIndiceArquivo-1] = deslocamento; 		
 			return valorRetornoIndiceArquivo;
 		}
 		
