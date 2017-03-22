@@ -532,6 +532,8 @@ int cry_delete(indice_arquivo_t arquivo) {
 	int i, blocoAtual = primeiroBloco[arquivo-1], blocoAux;
 	char zero = 0;
 
+
+
 	while(blocoAtual != 0) {
 		//printf("bloco: %d\n", blocoAtual);
 		fseek(currFileSys->arquivo_host, BLOCO * (19 + blocoAtual), SEEK_SET);
@@ -553,6 +555,8 @@ int cry_delete(indice_arquivo_t arquivo) {
 
 	for(i=0; i<256; i++)
 		currFileSys->descritores[arquivo-1].nome[i] = '\0';
+
+
 	totalBlocosUsados = totalBlocosUsados - (ceil((float)currFileSys->descritores[arquivo-1].tamanho/4096));
 
 	fclose(ponteirosArquivos[arquivo-1]);
@@ -653,9 +657,11 @@ uint32_t cry_read(indice_arquivo_t arquivo, uint32_t tamanho, char *buffer) {
 
 	int numLidos;//, k;
 	if(currFileSys->abertos[arquivo-1].arquivo != NULL) { 
+		printf("aberto valido\n");
 		//printf("NAO NULL\n");
+		printf("tamanho %d\n", currFileSys->descritores[arquivo-1].tamanho);
 		if(currFileSys->descritores[arquivo-1].tamanho <= 4096){
-			//printf("<1 bloco\n");
+			printf("<1 bloco\n");
 			//int seekArquivo = currFileSys->abertos[arquivo].posicao; // ARRUMAAAAAAAARRRRRRRR ISSO
 			int seekArquivo = 0;
 
@@ -742,13 +748,10 @@ indice_arquivo_t cry_open(cry_desc_t *cry_desc, char * nome,  int acesso, char d
 
 	//printf("open arquivo %s\n", nome);
 	if(numeroArquivosAbertos == 256){
-		//printf("max de abertos\n");
+		printf("max de abertos\n");
 		return FALHA;
 	}
-	if(numeroDescritores == 256){
-		//printf("max de descri\n");
-		return FALHA;
-	}
+
 	int j, k;
 	//int totalBytesArquivo = 0, contadorBytes = 0;
 	int valorRetornoIndiceArquivo;
@@ -758,10 +761,10 @@ indice_arquivo_t cry_open(cry_desc_t *cry_desc, char * nome,  int acesso, char d
 	//indice_arquivo_t teste;
 	FILE *fp;
 	//char *buffer, temp[BLOCO], aux, *bufferUmBloco;
-	//int pi;
-	//for(pi = 0; pi < 256; pi++) {
-//		printf("fat[%d]: %d\n", pi, fat[pi]);
-	//}
+	int pi;
+	for(pi = 0; pi < 256; pi++) {
+		//printf("nome %d  %s\n", pi, currFileSys->descritores[pi].nome);
+	}
 
 	//printf("nome %s\n", currFileSys->descritores[0].nome);
         
@@ -782,7 +785,7 @@ indice_arquivo_t cry_open(cry_desc_t *cry_desc, char * nome,  int acesso, char d
 		}
 	}
 	/*######################################## ARQUIVO EXISTE ########################################*/
-	if(existeArq == 1) { //rintf("EXISTE ARQUIVO\n");
+	if(existeArq == 1) { //printf("EXISTE ARQUIVO\n");
 			if(acesso == LEITURA) { //printf("EXISTE LEITURA\n");
 				if((fp = fopen(nome, "rb")) == NULL){
 					//printf("fp null\n");
@@ -790,9 +793,14 @@ indice_arquivo_t cry_open(cry_desc_t *cry_desc, char * nome,  int acesso, char d
 				} 
 					
 				else {
+					printf("nome %d  %s\n", j-1, currFileSys->descritores[j-1].nome);
+
 					numeroArquivosAbertos++;//printf("incrementou abertos %d\n", numeroArquivosAbertos);					//printf("else j %d | k %d\n",j,k);
 					cry_desc->abertos[k-1].arquivo = &cry_desc->descritores[j-1];
 					cry_desc->abertos[k-1].acesso = acesso;
+
+					printf("abertos %d %s\n", k-1, cry_desc->abertos[k-1].arquivo->nome);
+
 
 					atualizaDescritoresArquivo(acesso, j, k, 0, cry_desc);
 					ponteirosArquivos[k-1] = fp;
@@ -841,15 +849,21 @@ indice_arquivo_t cry_open(cry_desc_t *cry_desc, char * nome,  int acesso, char d
 				return FALHA;
 	}
 	/*######################################## ARQUIVO NOVO ########################################*/
-	else { //printf("NÃO EXISTE ARQUIVO\n");
+	else { printf("NÃO EXISTE ARQUIVO\n");
+		if(numeroDescritores == 256){
+			printf("max de descri\n");
+			return FALHA;
+		}
+
 		/*######################################## LEITURA ########################################*/
 		if(acesso == LEITURA) { //printf("NAOEXISTE LEITURA\n");
 			if((fp = fopen(nome, "rb")) == NULL) {
+				printf("IDOHODISAHODISAHDOASIDHAO\n");
 				return FALHA;
 			}
 			else {
-
-				numeroDescritores++;// printf("incrementou descritores %d\n", numeroDescritores);
+				return FALHA
+;				numeroDescritores++;// printf("incrementou descritores %d\n", numeroDescritores);
 				numeroArquivosAbertos++; 			
 
 				valorRetornoIndiceArquivo = atualizaDescritoresNovoArquivo(-1, nome, acesso, fp, cry_desc);
