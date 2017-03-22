@@ -513,7 +513,7 @@ int cry_seek(indice_arquivo_t arquivo, uint32_t seek) {
 				return FALHA;
 		}
 
-		fseek(ponteirosArquivos[arquivo-1], BLOCO * (20 + blocoSeek) + seekDentroBloco, SEEK_SET);
+		fseek(ponteirosArquivos[arquivo-1], BLOCO * (19 + blocoSeek) + seekDentroBloco, SEEK_SET);
 		currFileSys->abertos[arquivo-1].posicao = ftell(ponteirosArquivos[arquivo-1]);
 
 		return SUCESSO;
@@ -534,7 +534,7 @@ int cry_delete(indice_arquivo_t arquivo) {
 
 	while(blocoAtual != 0) {
 		//printf("bloco: %d\n", blocoAtual);
-		fseek(currFileSys->arquivo_host, BLOCO * (20 + blocoAtual), SEEK_SET);
+		fseek(currFileSys->arquivo_host, BLOCO * (19 + blocoAtual), SEEK_SET);
 		
 		for(i = 0; i < 4096; i++)
 			fwrite(&zero, sizeof(char), 1, currFileSys->arquivo_host);
@@ -660,10 +660,11 @@ uint32_t cry_read(indice_arquivo_t arquivo, uint32_t tamanho, char *buffer) {
 			int seekArquivo = 0;
 
 			if(seekArquivo + tamanho <= 4096) {
-				fseek(currFileSys->arquivo_host, BLOCO * (primeiroBloco[arquivo-1] + 20) + seekArquivo, SEEK_SET); 
+				fseek(currFileSys->arquivo_host, BLOCO * (primeiroBloco[arquivo-1] + 19) + seekArquivo, SEEK_SET); 
 
+				printf("ftell %ld\n", ftell(currFileSys->arquivo_host));
 				numLidos = fread(buffer, sizeof(char), tamanho, currFileSys->arquivo_host);
-
+				printf("buffer no read: %s\n", buffer);
 				//printf("buffer read: %s\n", buffer);
 				//printf("num lidos\n");
 				return numLidos;	
@@ -689,7 +690,7 @@ uint32_t cry_read(indice_arquivo_t arquivo, uint32_t tamanho, char *buffer) {
 			}
 			
 
-			fseek(currFileSys->arquivo_host, BLOCO * (blocoAtual + 20) + seekArquivo, SEEK_SET);
+			fseek(currFileSys->arquivo_host, BLOCO * (blocoAtual + 19) + seekArquivo, SEEK_SET);
 
 			int restoBloco = BLOCO - (seekArquivo % BLOCO);
 
@@ -699,6 +700,7 @@ uint32_t cry_read(indice_arquivo_t arquivo, uint32_t tamanho, char *buffer) {
 
 			while(contadorBytes < tamanho) {
 				/* LÊ CONTEÚDO PARA 1 BLOCO OU MENOS */
+
 				while(fread(&aux, 1, 1, currFileSys->arquivo_host)) {
 					buffer[contadorBytes] = aux;
 					//printf("%c", buffer[contadorBytes]);
@@ -713,7 +715,7 @@ uint32_t cry_read(indice_arquivo_t arquivo, uint32_t tamanho, char *buffer) {
 				contadorAux = 0;
 				blocoAtual = fat[blocoAtual];
 
-				fseek(currFileSys->arquivo_host, BLOCO * (blocoAtual + 20), SEEK_SET);
+				fseek(currFileSys->arquivo_host, BLOCO * (blocoAtual + 19), SEEK_SET);
 			}
 
 			//printf("num lidos\n");

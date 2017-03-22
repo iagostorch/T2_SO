@@ -188,7 +188,7 @@ int test2(){
           /* verifica se mesmo conteudo que escreveu */
           /* se 2.8 falhou, aqui pode dar certo e falhar */
           THEN("Valor lido e armazenado devem ser iguais");
-          if (strcmp(buffer, teste)==0){
+          if (strcmp(buffer, teste)!=0){
             FAIL(2,11);
           }
           else{
@@ -321,6 +321,8 @@ int test3(){
     OK(3,9);
     for(i=0; i<vezes; i++){
       char tmp[4096];
+      printf("indice arq %d\n", FH);
+      printf("nome desc %s\n", cryme->descritores[FH].nome);
       for (int i = 0; i < 4096; ++i)
       {
         tmp[i]=0;
