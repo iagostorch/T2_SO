@@ -343,6 +343,41 @@ int test3(){
     OK(3,10);
     OK(3,11);
 
+    grade+=5;//
+
+    /* testa se consegue ler com a cifra errada */
+    IF("Tento ler com a chave errada");
+    THEN("Deve ler lixo");
+
+    FH = cry_open(cryme, "teste4", LEITURA, 4);
+    if (FH==FALHA){
+      FAIL(3,12);
+      return grade;
+    }
+    OK(3,12);
+    for(i=0; i<vezes; i++){
+      char tmp[4096];
+      
+      for (int i = 0; i < 4096; ++i)
+      {
+        tmp[i]=0;
+      }
+      
+      if (cry_read(FH, 4096, tmp)==FALHA){
+        FAIL(3,13);
+        cry_close(FH);
+        return grade;
+      }
+      if(strcmp(buffer,tmp)==0){
+          //printf("BUFFER -- %s \n TMP -- %s", buffer, tmp);
+        FAIL(3,14);
+        return grade;
+      }
+    }
+    cry_close(FH);
+    OK(3,13);
+    OK(3,14);
+  
     grade+=2;
 
     return grade;
@@ -354,6 +389,342 @@ int test3(){
 
 
 
+
+
+/* verifica se consegue ter 256 arquivos no sistema */
+int test4(){
+
+  char *fsname;
+  int grade = 0;
+  int i;
+  cry_desc_t * cryme;
+  indice_arquivo_t  FH;
+  DESCRIBE("Verifica a possibilidade de ter 256 arquivos no FS");
+
+  /* nome do arquivo sera testes/testexxx */
+  assert(fsname = concat(TESTDIR, "test4"));
+
+  /* quantidade razoavel de blocos */
+
+  if (initfs(fsname, METADADOS*100)==SUCESSO){
+    OK(4,1);
+  }
+  else {
+      FAIL(4,1);
+      /* nao tem como continuar */
+      return grade;
+  }
+
+
+  cryme = cry_openfs(fsname);
+  if (!cryme){
+    FAIL(4,2);
+    /*  nao tem como continuar */
+    return grade;
+  }
+  else{
+    OK(4,2);
+  }
+
+  IF("Crio 256 arquivos pequenos");
+  THEN("O FS deve criá-los");
+
+  /* cria 256 arquivos de 1 bloco */
+  for(i=0; i<256; i++){
+    char name[80]; 
+    for(int j=0;j<80;j++){
+      name[j]=0;
+    }
+    sprintf(name,"a%d",i);
+  //  printf("namee: %s\n",name);
+    FH = cry_open(cryme, name, ESCRITA, i);
+  //  printf("TESTE 0 --- FH %s\n",cryme->abertos[FH].arquivo->nome);
+    if (FH==FALHA){
+      FAIL(4,3);
+      return grade;
+    }
+ //   printf("Tentando escrever em %s, 80 chares, que são eles: %s\n",cryme->abertos[FH].arquivo->nome,name);
+    if (cry_write(FH,80, name)==0){
+      FAIL(4,4);
+      return grade;
+    }
+   // printf("TESTE 2\n");
+    cry_close(FH);
+  }
+  OK(4,3);
+  OK(4,4);
+  grade+=2;
+
+  IF("Crio mais um arquivo");
+  THEN("Não deve permitir");
+  if ((FH=cry_open(cryme, "xxxxxx", ESCRITA, 0))){
+    printf("FH-%d\n",FH);
+    cry_close(FH);
+    FAIL(4,5);
+  }
+  else{
+    OK(4,5);
+    grade+=3;
+  }
+
+  IF("Abro os arquivos criados");
+  THEN("O conteúdo deve estar lá");
+  /* abre todo mundo, verifica conteudo e apaga */
+  /* cria 256 arquivos de 1 bloco */
+  for(i=0; i<256; i++){
+    char name[80];
+    char tmp[80];
+      
+      for(int j = 0; j < 80; j++) {
+          tmp[j] = 0;
+      }
+      for(int j=0;j<80;j++){
+          name[j]=0;
+      }
+    sprintf(name,"a%d",i);
+    FH = cry_open(cryme, name, LEITURA, i);
+    //printf("FH - %d --  name -- %s FILENAME -- %s  \n",FH, name, cryme->abertos[FH].arquivo->nome);
+    if (FH==FALHA){
+      FAIL(4,6);
+      return grade;
+    }
+    if (cry_read(FH,80, tmp)==0){
+      FAIL(4,7);
+      return grade;
+    }
+   // printf("FH --%d\n",FH );
+    int valor = strcmp(tmp,name);
+    if (valor!=0){
+      printf("%d\n",valor);
+      FAIL(4,8);
+      return grade+1;
+    }
+    cry_close(FH);
+  }
+  OK(4,6);
+  OK(4,7);
+  OK(4,8);
+
+  grade+=5;
+
+
+
+
+  return grade;
+}
+
+
+
+
+int test5(){
+
+  char *fsname;
+  int grade = 0;
+  cry_desc_t * cryme;
+  indice_arquivo_t  FH;
+  int lengthy = strlen(teste) + 1; // para incluir o "\0"
+
+  DESCRIBE("Verifica semântica de append");
+
+ /* nome do arquivo sera testes/testexxx */
+  assert(fsname = concat(TESTDIR, "test5"));
+
+  /* quantidade razoavel de blocos */
+
+  if (initfs(fsname, METADADOS+500)==SUCESSO){
+    OK(5,1);
+  }
+  else {
+      FAIL(5,1);
+      /* nao tem como continuar */
+      return grade;
+  }
+
+
+  cryme = cry_openfs(fsname);
+  if (!cryme){
+    FAIL(5,2);
+    /*  nao tem como continuar */
+    return grade;
+  }
+  else{
+    OK(5,2);
+  }
+
+  IF("Crio um arquivo para escrita");
+  THEN("Consigo escrever");
+
+  if (!(FH=cry_open(cryme, "xxxxxx", ESCRITA, 3))){
+    printf("FH - %d\n",FH);
+    FAIL(5,3);
+    return grade;
+  }
+  else{
+    OK(5,3);
+  }
+
+  IF("Se escreve no arquivo");
+  THEN("Deve escrever");
+  if(cry_write(FH, lengthy, (char *) teste)==SUCESSO){
+    char buffer[4096];
+    cry_close(FH);
+
+    THEN("Deve conseguir reabrir o arquivo");
+    FH = cry_open(cryme, "xxxxxx", LEITURA, 3);
+    if (FH==FALHA){
+      FAIL(5,4);
+    }
+    else OK(5,4);
+    THEN("Deve conseguir ler o valor escrito no arquivo");
+
+    if(cry_read(FH, lengthy, buffer)!=lengthy){
+        FAIL(5,5);
+    } else{
+      OK(5,5);
+      /* verifica se mesmo conteudo que escreveu */
+      if (strcmp(buffer, teste)!=0){
+        printf("buffer -- %s -- teste %s", buffer, teste);
+        FAIL(5,6);
+      }
+      else{
+        OK(5,6);
+      }
+    }
+    cry_close(FH);
+
+    IF("Escreve depois de dar um seek");
+    THEN("Deve escrever no fim (append)");
+    if (!(FH=cry_open(cryme, "xxxxxx", LEITURAESCRITA, 3))){
+      cry_close(FH);
+      FAIL(5,7);
+      return grade;
+    }
+    else{
+      OK(5,7);
+      cry_seek(FH, 10);
+
+      if(cry_write(FH, lengthy, (char *) teste)==SUCESSO){
+        //printf("FH -- %d",FH);
+        //printf("entrei\n");
+        char buffer[4096];
+        cry_seek(FH,0);
+        int a = cry_read(FH, lengthy*2, buffer);
+        if (strcmp(buffer, teste)!=0){
+          printf("buffer -- %s \n teste  -- %s", buffer, teste);
+          FAIL(5,8);
+        }
+        else{
+          if (strcmp(buffer+lengthy, teste)!=0){
+            printf("buffer -- %s -- teste %s", buffer, teste);
+            FAIL(5,9);
+          }
+          else{
+            OK(5,8);
+            OK(5,9);
+            grade+=10;
+          }
+        }
+    } 
+  }
+
+  }
+  return grade;
+
+}
+
+
+  //cry_creation(), cry_accessed(), cry_last_modified()
+
+int test6(){
+  char *fsname;
+  int grade = 0;
+  cry_desc_t * cryme;
+  indice_arquivo_t  FH;
+  char buffer[4096];
+
+  assert(fsname = concat(TESTDIR, "test6"));
+
+  /* quantidade razoavel de blocos */
+
+  if (initfs(fsname, METADADOS+20)==SUCESSO){
+    OK(6,1);
+  }
+  else {
+      FAIL(6,1);
+      /* nao tem como continuar */
+      return grade;
+  }
+
+
+  DESCRIBE("Testa gerenciamento de tempo e delete");
+  IF("Eu crio um arquivo");
+  THEN("Creation deve ser diferente de zero");
+
+  /* nome do arquivo sera testes/testexxx */
+
+
+  cryme = cry_openfs(fsname);
+  if (!cryme){
+    FAIL(6,2);
+    /*  nao tem como continuar */
+    return grade;
+  }
+  else{
+    OK(6,2);
+  }
+
+  if((FH=cry_open(cryme, "X", ESCRITA, 1))){
+    time_t created, modified;
+
+    if ((created=cry_creation(FH))==0){
+      FAIL(6,4);
+    }
+    else{
+      grade+=2;
+      OK(6,3);
+      OK(6,4);
+      IF("Eu escrevo algo");
+      THEN("Last modified tem que ser maior que creation");
+      sleep(1);
+      cry_write(FH, 1, (char *) "a");
+      modified=cry_last_modified(FH);
+      if(modified<=created){
+        FAIL(6,5);
+      }
+      else{
+        OK(6,5);
+        grade+=3;
+      }
+      IF("Eu removo o arquivo");
+      THEN("Não devo conseguir reabri-lo");
+      cry_delete(FH);
+      if ((FH=cry_open(cryme, "X", LEITURA, 1))){
+        FAIL(6,6);
+      }
+      else{
+        OK(6,6);
+        grade+=3;
+      }
+      IF("Eu acesso o arquivo não aberto");
+      THEN("Não devo conseguir ler");
+      if (cry_read(FH, 1, buffer)){
+        FAIL(6,7);
+      }
+      else{
+        OK(6,7);
+        grade+=2;
+      }
+    }}
+  else {
+    FAIL(6,3);
+  }
+
+
+
+
+
+  return grade; 
+}
 
 /* faz o show acontecer */
 int main(int argc, char ** argv){
@@ -385,7 +756,13 @@ int main(int argc, char ** argv){
   GRADEIT(2);
   grades[2]=test3();
   GRADEIT(3);
- 
+  grades[3]=test4();
+  GRADEIT(4);
+  grades[4]=test5();
+  GRADEIT(5);
+  grades[5]=test6();
+  GRADEIT(6);
+
 
   printf("NOTA FINAL %.2f\n",finalgrade);
 

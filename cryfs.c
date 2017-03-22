@@ -355,7 +355,7 @@ int cry_write(indice_arquivo_t arquivo, uint32_t tamanho, char *buffer) {
 
 			return SUCESSO;
 		}
-		else { printf("+ 1 bloco\n");
+		else { //printf("+ 1 bloco\n");
 			blocoAtual = fat[0];
 			primeiroBloco[arquivo] = fat[0];
 			//printf("BLOCO ATUAL: %d", blocoAtual);
@@ -364,7 +364,7 @@ int cry_write(indice_arquivo_t arquivo, uint32_t tamanho, char *buffer) {
 
 			posAtualBloco = 0;
 			//contadorAux = posAtualBloco;
-			printf("bloco atual %d\n", blocoAtual);
+			//printf("bloco atual %d\n", blocoAtual);
 			while(contadorBytes < tamanho){
 				for(j = 0; j < 4096; j++) {
 					temp[j] = buffer[contadorBytes];
@@ -519,7 +519,7 @@ int cry_delete(indice_arquivo_t arquivo) {
 	char zero = 0;
 
 	while(blocoAtual != 0) {
-		printf("bloco: %d\n", blocoAtual);
+		//printf("bloco: %d\n", blocoAtual);
 		fseek(currFileSys->arquivo_host, BLOCO * (20 + blocoAtual), SEEK_SET);
 		
 		for(i = 0; i < 4096; i++)
@@ -550,39 +550,47 @@ int cry_delete(indice_arquivo_t arquivo) {
 
 int atualizaDescritoresNovoArquivo(int totalBytes, char *nome, int acesso, FILE * filePointer, cry_desc_t * descritor) {
 	/* ATUALIZA DESCRITOR DE ARQUIVO */
-	int fileIndex, primeiroLivre;
+	int fileIndex;//, primeiroLivre;
+	int indiceDescritor, indiceAberto;
 	for(fileIndex = 1; fileIndex < 256; fileIndex++){
 		if(descritor->descritores[fileIndex].tamanho == 0){
-			primeiroLivre = fileIndex;
+			indiceDescritor = fileIndex;
             //printf("primeiro livre %d\n", primeiroLivre);
 			break;	
 		}
 	}
+
+	for(fileIndex = 1; fileIndex < 256; fileIndex++){
+		if(descritor->abertos[fileIndex].arquivo == NULL){
+			indiceAberto = fileIndex;
+			break;
+		}
+	}
 	
 	/* SALVA PONTEIRO DO ARQUIVO */
-	ponteirosArquivos[primeiroLivre] = filePointer;
+	ponteirosArquivos[indiceAberto] = filePointer;
 
-	strcpy(descritor->descritores[primeiroLivre].nome, nome);
-	time(&descritor->descritores[primeiroLivre].criacao);
-	time(&descritor->descritores[primeiroLivre].modificacao);
-	time(&descritor->descritores[primeiroLivre].ultimo_acesso);
-	descritor->descritores[primeiroLivre].tamanho = totalBytes;
+	strcpy(descritor->descritores[indiceDescritor].nome, nome);
+	time(&descritor->descritores[indiceDescritor].criacao);
+	time(&descritor->descritores[indiceDescritor].modificacao);
+	time(&descritor->descritores[indiceDescritor].ultimo_acesso);
+	descritor->descritores[indiceDescritor].tamanho = totalBytes;
 
-	fseek(descritor->arquivo_host, sizeof(descritor_t) * primeiroLivre, SEEK_SET);
+	fseek(descritor->arquivo_host, sizeof(descritor_t) * indiceDescritor, SEEK_SET);
 	
-	fwrite(descritor->descritores[primeiroLivre].nome, sizeof(char), 256, descritor->arquivo_host);
-	fwrite(&descritor->descritores[primeiroLivre].criacao, sizeof(time_t), 1, descritor->arquivo_host);
-	fwrite(&descritor->descritores[primeiroLivre].modificacao, sizeof(time_t), 1, descritor->arquivo_host);
-	fwrite(&descritor->descritores[primeiroLivre].ultimo_acesso, sizeof(time_t), 1, descritor->arquivo_host);
-	fwrite(&descritor->descritores[primeiroLivre].tamanho, sizeof(uint32_t), 1, descritor->arquivo_host);
+	fwrite(descritor->descritores[indiceDescritor].nome, sizeof(char), 256, descritor->arquivo_host);
+	fwrite(&descritor->descritores[indiceDescritor].criacao, sizeof(time_t), 1, descritor->arquivo_host);
+	fwrite(&descritor->descritores[indiceDescritor].modificacao, sizeof(time_t), 1, descritor->arquivo_host);
+	fwrite(&descritor->descritores[indiceDescritor].ultimo_acesso, sizeof(time_t), 1, descritor->arquivo_host);
+	fwrite(&descritor->descritores[indiceDescritor].tamanho, sizeof(uint32_t), 1, descritor->arquivo_host);
 
-	descritor->abertos[primeiroLivre].acesso = acesso;
-	descritor->abertos[primeiroLivre].posicao = ftell(filePointer);
-	descritor->abertos[primeiroLivre].arquivo = &descritor->descritores[primeiroLivre];
-	if(primeiroLivre == 0)
+	descritor->abertos[indiceAberto].acesso = acesso;
+	descritor->abertos[indiceAberto].posicao = ftell(filePointer);
+	descritor->abertos[indiceAberto].arquivo = &descritor->descritores[indiceDescritor];
+	if(indiceAberto == 0)
 		return -1;
 	else
-		return primeiroLivre;
+		return indiceAberto;
 }
 
 void atualizaDescritoresArquivo(int acesso, int indiceDescritor, int indiceAberto, int tamanho, cry_desc_t * descritor) {
@@ -620,7 +628,7 @@ void atualizaDescritoresArquivo(int acesso, int indiceDescritor, int indiceAbert
 uint32_t cry_read(indice_arquivo_t arquivo, uint32_t tamanho, char *buffer) {
 	//nao usada
 	//FILE * arquivoLeitura = ponteirosArquivos[arquivo];
-	printf("cry_read\n");
+	//printf("cry_read\n");
 	//printf("nome arquivo parametro %s\n", currFileSys->abertos[arquivo]->arquivo->nome);
 	//printf("nome arquivo parametro %s\n", currFileSys->abertos[arquivo].arquivo->nome);
 	for(int b=0; b<256; b++){
@@ -630,7 +638,7 @@ uint32_t cry_read(indice_arquivo_t arquivo, uint32_t tamanho, char *buffer) {
 
 	int numLidos;//, k;
 	if(currFileSys->abertos[arquivo].arquivo != NULL) { 
-		printf("NAO NULL\n");
+		//printf("NAO NULL\n");
 		if(currFileSys->descritores[arquivo].tamanho <= 4096){
 			//printf("<1 bloco\n");
 			//int seekArquivo = currFileSys->abertos[arquivo].posicao; // ARRUMAAAAAAAARRRRRRRR ISSO
@@ -642,7 +650,7 @@ uint32_t cry_read(indice_arquivo_t arquivo, uint32_t tamanho, char *buffer) {
 				numLidos = fread(buffer, sizeof(char), tamanho, currFileSys->arquivo_host);
 
 				//printf("buffer read: %s\n", buffer);
-				printf("num lidos\n");
+				//printf("num lidos\n");
 				return numLidos;	
 			}
 			else{	//SEEK DO ARQUIVO + NUMERO DE BYTES EXTRAPOLA TAMANHO DO ARQUIVO
@@ -678,7 +686,7 @@ uint32_t cry_read(indice_arquivo_t arquivo, uint32_t tamanho, char *buffer) {
 				/* LÊ CONTEÚDO PARA 1 BLOCO OU MENOS */
 				while(fread(&aux, 1, 1, currFileSys->arquivo_host)) {
 					buffer[contadorBytes] = aux;
-					printf("%c", buffer[contadorBytes]);
+					//printf("%c", buffer[contadorBytes]);
 					contadorBytes++;
 					contadorAux++;
 
@@ -693,12 +701,12 @@ uint32_t cry_read(indice_arquivo_t arquivo, uint32_t tamanho, char *buffer) {
 				fseek(currFileSys->arquivo_host, BLOCO * (blocoAtual + 20), SEEK_SET);
 			}
 
-			printf("num lidos\n");
+			//printf("num lidos\n");
 			return contadorBytes;
 		}		
 	}
 	else{	//o indice do arquivo passado nao está aberto
-		printf("é NULL\n");
+		//printf("é NULL\n");
 		return FALHA;
 	}
 }
@@ -731,27 +739,31 @@ indice_arquivo_t cry_open(cry_desc_t *cry_desc, char * nome,  int acesso, char d
 	//printf("nome %s\n", currFileSys->descritores[0].nome);
         
 	//buffer = (char *) malloc(sizeof(char));
-	for(j = 0; j < 256; j++) {
+	for(j = 1; j < 256; j++) {
 		//printf("j %d\n", j);
 		if(!(strcmp(cry_desc->descritores[j].nome, nome))) {
 			existeArq = 1;
-			printf("descritor coincide: %d\n", j);
+			//printf("descritor coincide: %d\n", j);
 			break;
 		}
 	}
 
-	for(k = 0; k < 256; k++) {
+	for(k = 1; k < 256; k++) {
 		if(cry_desc->abertos[k].arquivo == NULL){
-			printf("aberto disponpivel %d\n", k);
+			//printf("aberto disponpivel %d\n", k);
 			break;
 		}
 	}
 	/*######################################## ARQUIVO EXISTE ########################################*/
-	if(existeArq == 1) { printf("EXISTE ARQUIVO\n");
+	if(existeArq == 1) { //rintf("EXISTE ARQUIVO\n");
 			if(acesso == LEITURA) { //printf("EXISTE LEITURA\n");
-				if((fp = fopen(nome, "rb")) == NULL) 
+				if((fp = fopen(nome, "rb")) == NULL){
+					//printf("fp null\n");
 					return FALHA;
+				} 
+					
 				else {
+					//printf("else j %d | k %d\n",j,k);
 					cry_desc->abertos[k].arquivo = &cry_desc->descritores[j];
 					cry_desc->abertos[k].acesso = acesso;
 
@@ -761,7 +773,7 @@ indice_arquivo_t cry_open(cry_desc_t *cry_desc, char * nome,  int acesso, char d
                     if(j == 0)
                     	return -1;
                     else
-						return (indice_arquivo_t) j;
+						return (indice_arquivo_t) k;
 				}
 			}
 
@@ -778,7 +790,7 @@ indice_arquivo_t cry_open(cry_desc_t *cry_desc, char * nome,  int acesso, char d
                 if(j == 0)
                 	return -1;
                 else
-					return (indice_arquivo_t) j;
+					return (indice_arquivo_t) k;
 			}
 
 			if(acesso == LEITURAESCRITA) {//printf("EXISTE LEITURAESCRITA\n");
@@ -794,13 +806,13 @@ indice_arquivo_t cry_open(cry_desc_t *cry_desc, char * nome,  int acesso, char d
                 if(j == 0)
                 	return -1;
                 else
-					return (indice_arquivo_t) j;
+					return (indice_arquivo_t) k;
 			}
 			if(acesso >= 3)	//TENTOU ACESSAR NUM MODO INEXISTENTE
 				return FALHA;
 	}
 	/*######################################## ARQUIVO NOVO ########################################*/
-	else { printf("NÃO EXISTE ARQUIVO\n");
+	else { //printf("NÃO EXISTE ARQUIVO\n");
 		/*######################################## LEITURA ########################################*/
 		if(acesso == LEITURA) { //printf("NAOEXISTE LEITURA\n");
 			if((fp = fopen(nome, "rb")) == NULL) {
